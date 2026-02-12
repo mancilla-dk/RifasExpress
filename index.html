@@ -2245,80 +2245,84 @@ div:where(.swal2-styled).swal2-confirm:hover {
         // 5. LÓGICA DE EVENTOS & CARRUSEL (MODIFICADA: SINGLE EVENT)
         // ==========================================
         function renderEventsList(events) {
-            const grid = document.getElementById('events-grid'); // Lista Sorteos
-            const heroContainer = document.getElementById('hero-single-event-container'); // Hero Inicio
-            const createBtn = document.getElementById('btn-create-event'); // Botón Admin Crear
-            
-            if(!grid || !heroContainer) return;
-            grid.innerHTML = ''; 
-            heroContainer.innerHTML = '';
-            
-            const eventKeys = Object.keys(events || {});
-            
-            if(eventKeys.length === 0) {
-                // NO HAY EVENTOS
-                const msg = '<p style="text-align:center; color:#aaa; width:100%;">No hay sorteo activo en este momento.</p>';
-                grid.innerHTML = msg; 
-                heroContainer.innerHTML = msg;
-                // Mostrar botón de crear si es admin
-                if(createBtn) createBtn.style.display = 'inline-block';
-                return;
-            }
+    const grid = document.getElementById('events-grid'); 
+    const heroContainer = document.getElementById('hero-single-event-container'); 
+    const createBtn = document.getElementById('btn-create-event'); 
+    
+    // Seguridad: Si el HTML no ha cargado, salimos.
+    if(!grid || !heroContainer) return;
 
-            // SI HAY AL MENOS UN EVENTO (Tomamos el primero para el Single Mode)
-            const id = eventKeys[0]; 
-            const ev = events[id].config;
+    grid.innerHTML = ''; 
+    heroContainer.innerHTML = '';
+    
+    const eventKeys = Object.keys(events || {});
+    
+    // CASO: NO HAY EVENTOS
+    if(eventKeys.length === 0) {
+        const msg = '<p style="text-align:center; color:#aaa; width:100%;">No hay sorteo activo en este momento.</p>';
+        grid.innerHTML = msg; 
+        heroContainer.innerHTML = msg;
+        
+        if(createBtn) createBtn.style.display = 'inline-block';
+        
+        // CORRECCIÓN IMPORTANTE: Quitar el cargador aquí también
+        removeSkeleton(); // <--- AGREGAR ESTO AQUÍ
+        
+        return; 
+    }
 
-            // 1. OCULTAR BOTÓN CREAR (Single Event Rule)
-            if(createBtn) createBtn.style.display = 'none';
+    // SI HAY EVENTOS...
+    const id = eventKeys[0]; 
+    const ev = events[id].config;
 
-            // 2. RENDERIZAR HERO CARD (Inicio)
-            // Estética Cyberpunk Hero Card
-            const heroHTML = `
-            <div class="hero-card" onclick="selectEvent('${id}')" style="cursor:pointer;">
-                <img src="${ev.img || 'https://via.placeholder.com/600x400'}" alt="${ev.title}">
-                <div class="hero-card-body">
-                    <div class="hero-card-title">${ev.title}</div>
-                    <div class="hero-card-price">$${ev.price} <span style="font-size:1rem; color:#aaa;">MXN</span></div>
-                    <p style="color:#ddd; margin-bottom:15px;">${ev.descShort || '¡Participa y gana!'}</p>
-                    <button class="btn-action" style="width:100%; font-size:1.2rem; background:var(--primary); color:black; border:none;">
-                        COMPRAR BOLETOS AHORA
-                    </button>
+    if(createBtn) createBtn.style.display = 'none';
+
+    // Render Hero Card
+    const heroHTML = `
+    <div class="hero-card" onclick="selectEvent('${id}')" style="cursor:pointer;">
+        <img src="${ev.img || 'https://via.placeholder.com/600x400'}" alt="${ev.title}">
+        <div class="hero-card-body">
+            <div class="hero-card-title">${ev.title}</div>
+            <div class="hero-card-price">$${ev.price} <span style="font-size:1rem; color:#aaa;">MXN</span></div>
+            <p style="color:#ddd; margin-bottom:15px;">${ev.descShort || '¡Participa y gana!'}</p>
+            <button class="btn-action" style="width:100%; font-size:1.2rem; background:var(--primary); color:black; border:none;">
+                COMPRAR BOLETOS AHORA
+            </button>
+        </div>
+    </div>`;
+    heroContainer.innerHTML = heroHTML;
+
+    // Render Grid Card
+    let typeBadge = "";
+    if(ev.type === "nacional") typeBadge = '<span style="font-size:0.7rem; background:#004481; color:white; padding:2px 6px; border-radius:4px; margin-right:5px;">LOTERÍA NACIONAL</span>';
+    else if(ev.type === "tris") typeBadge = '<span style="font-size:0.7rem; background:#4a0072; color:white; padding:2px 6px; border-radius:4px; margin-right:5px;">TRIS</span>';
+    else typeBadge = '<span style="font-size:0.7rem; background:#005c4b; color:white; padding:2px 6px; border-radius:4px; margin-right:5px;">ENTRE AMIGOS</span>';
+
+    const cardHTML = `
+        <div class="event-card" onclick="selectEvent('${id}')">
+            <div class="btn-edit-floating admin-only" onclick="event.stopPropagation(); openEditEvent('${id}')">
+                <i class="fas fa-pencil-alt"></i>
+            </div>
+            <img src="${ev.img || 'https://via.placeholder.com/300'}" class="event-img">
+            <div class="event-body">
+                <div>
+                    <div style="margin-bottom:5px;">${typeBadge}</div>
+                    <div class="event-title">${ev.title}</div>
+                    <div class="event-desc">${ev.descShort || ''}</div>
                 </div>
-            </div>`;
-            heroContainer.innerHTML = heroHTML;
+                <div>
+                    <div class="event-price">$${ev.price}</div>
+                    <button class="btn-action" style="width:100%; margin-top:10px; background:transparent; border:1px solid var(--primary); color:var(--primary);">VER BOLETOS</button>
+                </div>
+            </div>
+        </div>`;
+    
+    grid.innerHTML = cardHTML;
+    
+    // Quitar cargador si hay datos
+    removeSkeleton();
+}
 
-            // 3. RENDERIZAR GRID CARD (Página Sorteos)
-            // Misma lógica de tarjeta pero adaptada al grid
-            let typeBadge = "";
-            if(ev.type === "nacional") typeBadge = '<span style="font-size:0.7rem; background:#004481; color:white; padding:2px 6px; border-radius:4px; margin-right:5px;">LOTERÍA NACIONAL</span>';
-            else if(ev.type === "tris") typeBadge = '<span style="font-size:0.7rem; background:#4a0072; color:white; padding:2px 6px; border-radius:4px; margin-right:5px;">TRIS</span>';
-            else typeBadge = '<span style="font-size:0.7rem; background:#005c4b; color:white; padding:2px 6px; border-radius:4px; margin-right:5px;">ENTRE AMIGOS</span>';
-
-            const cardHTML = `
-                <div class="event-card" onclick="selectEvent('${id}')">
-                    <div class="btn-edit-floating admin-only" onclick="event.stopPropagation(); openEditEvent('${id}')">
-                        <i class="fas fa-pencil-alt"></i>
-                    </div>
-                    <img src="${ev.img || 'https://via.placeholder.com/300'}" class="event-img">
-                    <div class="event-body">
-                        <div>
-                            <div style="margin-bottom:5px;">${typeBadge}</div>
-                            <div class="event-title">${ev.title}</div>
-                            <div class="event-desc">${ev.descShort || ''}</div>
-                        </div>
-                        <div>
-                            <div class="event-price">$${ev.price}</div>
-                            <button class="btn-action" style="width:100%; margin-top:10px; background:transparent; border:1px solid var(--primary); color:var(--primary);">VER BOLETOS</button>
-                        </div>
-                    </div>
-                </div>`;
-            
-            grid.innerHTML = cardHTML;
-                  // CIRUGIA: Quitar skeleton solo cuando haya datos reales
-            removeSkeleton();
-
-        }
 
         // --- FAQ & Terms Helper Logic ---
         function openFaqEditor() { closeModal('modal-settings-menu'); renderFaqEditor(); document.getElementById('modal-editor-faq').style.display='flex'; }
